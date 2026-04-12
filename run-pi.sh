@@ -108,6 +108,7 @@ DOCKER_ARGS=(
     --user 1000:1000
     --env "USER=$USER_NAME"
     --env "HOME=/home/node"
+    --env "NPM_CONFIG_PREFIX=/home/node/.local"
     --env "PI_CODING_AGENT_DIR=/home/node/.pi/agent"
     --workdir /workspace
 )
@@ -152,7 +153,7 @@ DOCKER_ARGS+=(-v "$HOST_CWD:/workspace")
 # Mount pi configuration directories
 if [[ "$MOUNT_PI" == "true" ]]; then
     if [[ -d "$USER_HOME/.pi" ]]; then
-        DOCKER_ARGS+=(-v "$USER_HOME/.pi:/home/node/.pi:ro")
+        DOCKER_ARGS+=(-v "$USER_HOME/.pi:/home/node/.pi")
     fi
 
     # ~/.agents -> /home/node/.agents
