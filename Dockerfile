@@ -8,17 +8,26 @@ RUN apt-get update && apt-get install -y \
     openssh-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Install pi globally
-RUN npm install -g @mariozechner/pi-coding-agent
+ENV PATH="/home/node/.local/bin:$PATH"
 
-# Set up pi config directory structure for node user
 RUN mkdir -p /home/node/.pi/agent
 RUN mkdir /workspace
 
-WORKDIR /workspace
+RUN chown -R node:node /home/node/.pi
+RUN chown -R node:node /workspace
 
-# Use node user (UID 1000) created by base image
 USER node
+
+RUN npm config set prefix /home/node/.local
+
+RUN npm install -g @mariozechner/pi-coding-agent
+RUN npm install -g lean-ctx-bin
+RUN npm install -g @aliou/pi-guardrails
+RUN npm install -g @mjakl/pi-subagent
+
+RUN lean-ctx setup
+
+WORKDIR /workspace
 
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]

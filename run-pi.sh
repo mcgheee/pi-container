@@ -15,7 +15,7 @@
 #   - Current working directory -> /workspace (current dir of pi)
 #   - ~/.pi                      -> /home/node/.pi (pi configuration)
 #   - ~/.agents                  -> /home/node/.agents (shared skills location)
-#   - ~/.npmrc                   -> /home/node/.npmrc (npm authentication if exists)
+#   - Note: ~/.npmrc is NOT mounted - host config often has paths that break in container
 #
 
 set -e
@@ -108,7 +108,6 @@ DOCKER_ARGS=(
     --user 1000:1000
     --env "USER=$USER_NAME"
     --env "HOME=/home/node"
-    --env "NPM_CONFIG_PREFIX=/home/node/.local"
     --env "PI_CODING_AGENT_DIR=/home/node/.pi/agent"
     --workdir /workspace
 )
@@ -192,10 +191,12 @@ if [[ "$MOUNT_PI" == "true" ]]; then
         DOCKER_ARGS+=(-v "$USER_HOME/.agents:/home/node/.agents:ro")
     fi
 
-    # ~/.npmrc -> /home/node/.npmrc
-    if [[ -f "$USER_HOME/.npmrc" ]]; then
-        DOCKER_ARGS+=(-v "$USER_HOME/.npmrc:/home/node/.npmrc:ro")
-    fi
+    # Note: We don't mount ~/.npmrc because it often contains host-specific paths (like prefix=)
+    # that break in the container. The container has npm configured to use /usr/local by default.
+    # If you need npm auth in the container, set NPM_TOKEN env var instead.
+    # if [[ -f "$USER_HOME/.npmrc" ]]; then
+    #     DOCKER_ARGS+=(-v "$USER_HOME/.npmrc:/home/node/.npmrc:ro")
+    # fi
 
     # ~/.gitconfig -> /home/node/.gitconfig
     if [[ -f "$USER_HOME/.gitconfig" ]]; then
