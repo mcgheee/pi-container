@@ -137,7 +137,8 @@ for env_var in \
     XAI_API_KEY \
     OPENROUTER_API_KEY \
     HF_TOKEN \
-    AWS_ACCESS_KEY_ID \
+    GH_TOKEN \
+    GITHUB_TOKEN \
     KIMI_API_KEY \
     MINIMAX_API_KEY \
     KILO_API_TOKEN; do
@@ -145,6 +146,18 @@ for env_var in \
         DOCKER_ARGS+=(--env "$env_var=${!env_var}")
     fi
 done
+
+# If GH_TOKEN not set, try to extract it from HOST gh config using host gh
+# (gh stores token in keyring on host, which isn't accessible in container)
+# We use 'command -v' from the host to check for gh, not a docker container
+if [[ -z "$GH_TOKEN" ]] && command -v gh >/dev/null 2>&1; then
+    if gh auth status >/dev/null 2>&1; then
+        GH_TOKEN=$(gh auth token 2>/dev/null)
+        if [[ -n "$GH_TOKEN" ]]; then
+            DOCKER_ARGS+=(--env "GH_TOKEN=$GH_TOKEN")
+        fi
+    fi
+fi
 
 # Mount current working directory
 HOST_CWD="$(pwd)"
