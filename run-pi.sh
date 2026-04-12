@@ -1,0 +1,186 @@
+#!/usr/bin/env bash
+#
+# pi-container - Run Pi agent inside a container
+#
+# Usage:
+#   pi-container                    # Start interactive pi in current directory
+#   pi-container "Your prompt"      # Run pi with a prompt and exit
+#   pi-container --help             # Show help
+#
+# Environment Variables:
+#   PI_DOCKER_IMAGE   - Override default container image (default: pi-agent:latest)
+#   PI_API_KEY        - Set API key (alternatively use ANTHROPIC_API_KEY, OPENAI_API_KEY, etc.)
+#
+# Mounts:
+#   - Current working directory -> /workspace (current dir of pi)
+#   - ~/.pi                      -> /home/node/.pi (pi configuration)
+#   - ~/.agents                  -> /home/node/.agents (shared skills location)
+#   - ~/.npmrc                   -> /home/node/.npmrc (npm authentication if exists)
+#
+
+set -e
+
+# Configuration
+IMAGE="${PI_DOCKER_IMAGE:-pi-agent:latest}"
+CONTAINER_NAME="pi-agent-$$"
+
+# Color output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+usage() {
+    cat << EOF
+Usage: $(basename "$0") [options] [prompt]
+
+Run Pi agent inside an isolated container with your working directory mounted.
+
+Arguments:
+    prompt              Optional initial prompt to send to pi
+
+Options:
+    -h, --help         Show this help message
+    -i, --image IMAGE  Docker image to use (default: pi-agent:latest)
+    --no-mount-pi      Don't mount ~/.pi configuration
+    --verbose          Show docker commands being executed
+    --                 Pass through arguments to pi
+
+Examples:
+    $(basename "$0")                                    # Interactive mode
+    $(basename "$0") "List files in src/"               # Run with prompt
+    pi-container -i my-custom-image "Hello"             # Custom image
+    PI_API_KEY=sk-ant-... $(basename "$0") "Hello"       # Set API key
+EOF
+    exit "${1:-0}"
+}
+
+# Parse arguments
+MOUNT_PI=true
+VERBOSE=false
+PI_ARGS=()
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -h|--help)
+            usage 0
+            ;;
+        -i|--image)
+            IMAGE="$2"
+            shift 2
+            ;;
+        --no-mount-pi)
+            MOUNT_PI=false
+            shift
+            ;;
+        --verbose)
+            VERBOSE=true
+            shift
+            ;;
+        --)
+            shift
+            PI_ARGS+=("$@")
+            break
+            ;;
+        -*)
+            echo -e "${RED}Error: Unknown option: $1${NC}" >&2
+            usage 1
+            ;;
+        *)
+            PI_ARGS+=("$1")
+            shift
+            ;;
+    esac
+done
+
+# Get current user info for correct UID/GID in container
+USER_UID=$(id -u)
+USER_GID=$(id -g)
+USER_NAME=$(whoami)
+USER_HOME="$HOME"
+
+# Build docker run arguments
+DOCKER_ARGS=(
+    --rm
+    --interactive
+    --tty
+    --name "$CONTAINER_NAME"
+    --user 1000:1000
+    --env "USER=$USER_NAME"
+    --env "HOME=/home/node"
+    --env "PI_CODING_AGENT_DIR=/home/node/.pi/agent"
+    --workdir /workspace
+)
+
+# Forward relevant environment variables
+for env_var in \
+    PI_CODING_AGENT_DIR \
+    PI_PACKAGE_DIR \
+    PI_SKIP_VERSION_CHECK \
+    PI_CACHE_RETENTION \
+    PI_SHARE_VIEWER_URL \
+    ANTHROPIC_API_KEY \
+    ANTHROPIC_API_KEY_FILE \
+    OPENAI_API_KEY \
+    OPENAI_API_KEY_FILE \
+    GOOGLE_API_KEY \
+    VERTEX_PROJECT \
+    VERTEX_LOCATION \
+    AZURE_OPENAI_API_KEY \
+    AWS_ACCESS_KEY_ID \
+    AWS_SECRET_ACCESS_KEY \
+    AWS_DEFAULT_REGION \
+    MISTRAL_API_KEY \
+    GROQ_API_KEY \
+    CEREBRAS_API_KEY \
+    XAI_API_KEY \
+    OPENROUTER_API_KEY \
+    HF_TOKEN \
+    AWS_ACCESS_KEY_ID \
+    KIMI_API_KEY \
+    MINIMAX_API_KEY \
+    KILO_API_TOKEN; do
+    if [[ -n "${!env_var}" ]]; then
+        DOCKER_ARGS+=(--env "$env_var=${!env_var}")
+    fi
+done
+
+# Mount current working directory
+HOST_CWD="$(pwd)"
+DOCKER_ARGS+=(-v "$HOST_CWD:/workspace")
+
+# Mount pi configuration directories
+if [[ "$MOUNT_PI" == "true" ]]; then
+    if [[ -d "$USER_HOME/.pi" ]]; then
+        DOCKER_ARGS+=(-v "$USER_HOME/.pi:/home/node/.pi:ro")
+    fi
+
+    # ~/.agents -> /home/node/.agents
+    if [[ -d "$USER_HOME/.agents" ]]; then
+        DOCKER_ARGS+=(-v "$USER_HOME/.agents:/home/node/.agents:ro")
+    fi
+
+    # ~/.npmrc -> /home/node/.npmrc
+    if [[ -f "$USER_HOME/.npmrc" ]]; then
+        DOCKER_ARGS+=(-v "$USER_HOME/.npmrc:/home/node/.npmrc:ro")
+    fi
+
+    # ~/.gitconfig -> /home/node/.gitconfig
+    if [[ -f "$USER_HOME/.gitconfig" ]]; then
+        DOCKER_ARGS+=(-v "$USER_HOME/.gitconfig:/home/node/.gitconfig:ro")
+    fi
+
+    # ~/.ssh -> /home/node/.ssh (for git operations)
+    if [[ -d "$USER_HOME/.ssh" ]]; then
+        DOCKER_ARGS+=(-v "$USER_HOME/.ssh:/home/node/.ssh:ro")
+    fi
+fi
+
+# Show docker command if verbose
+if [[ "$VERBOSE" == "true" ]]; then
+    echo -e "${GREEN}Running:${NC} docker run $IMAGE pi ${PI_ARGS[*]}" >&2
+    echo -e "${GREEN}Docker args:${NC} ${DOCKER_ARGS[*]}" >&2
+fi
+
+# Run pi in container
+exec docker run "${DOCKER_ARGS[@]}" "$IMAGE" pi "${PI_ARGS[@]}"
