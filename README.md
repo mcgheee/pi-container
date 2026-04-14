@@ -83,6 +83,7 @@ Options:
 | Variable | Description |
 |----------|-------------|
 | `PI_DOCKER_IMAGE` | Override default container image |
+| `PI_CONTAINER_ENGINE` | Container runtime command (default: `podman`) |
 | `ANTHROPIC_API_KEY` | Anthropic API key |
 | `OPENAI_API_KEY` | OpenAI API key |
 | `GOOGLE_API_KEY` | Google API key |
@@ -130,6 +131,9 @@ Fix ownership on the host:
 ```bash
 sudo chown -R "$(id -u)":"$(id -g)" ~/.pi
 ```
+
+On SELinux-enabled systems (common with Podman), bind-mount writes can also fail with `EACCES`.
+`run-pi.sh` now runs Podman with `--security-opt label=disable` by default to avoid this issue.
 
 ## Customization
 

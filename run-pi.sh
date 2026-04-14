@@ -23,6 +23,7 @@ set -e
 # Configuration
 IMAGE="${PI_DOCKER_IMAGE:-pi-agent:latest}"
 CONTAINER_NAME="pi-agent-$$"
+CONTAINER_ENGINE="${PI_CONTAINER_ENGINE:-podman}"
 
 # Color output
 RED='\033[0;31m'
@@ -112,6 +113,12 @@ DOCKER_ARGS=(
     --workdir /workspace
     --network host
 )
+
+# Podman + SELinux can deny writes to bind mounts unless labeling is configured.
+# Disabling container labels for this run avoids EACCES on mounted ~/.pi.
+if [[ "$CONTAINER_ENGINE" == "podman" ]]; then
+    DOCKER_ARGS+=(--security-opt label=disable)
+fi
 
 # Forward relevant environment variables
 for env_var in \
@@ -232,10 +239,10 @@ fi
 
 # Show docker command if verbose
 if [[ "$VERBOSE" == "true" ]]; then
-    echo -e "${GREEN}Running:${NC} docker run $IMAGE bash -l -c pi ${PI_ARGS[*]}" >&2
-    echo -e "${GREEN}Docker args:${NC} ${DOCKER_ARGS[*]}" >&2
+    echo -e "${GREEN}Running:${NC} $CONTAINER_ENGINE run $IMAGE bash -l -c pi ${PI_ARGS[*]}" >&2
+    echo -e "${GREEN}Container args:${NC} ${DOCKER_ARGS[*]}" >&2
 fi
 
 # Run pi in container through bash (login shell to source ~/.bashrc for leanctx aliases)
 # First run lean-ctx doctor to verify lean-ctx is healthy, then start dashboard in background and run pi
-exec podman run "${DOCKER_ARGS[@]}" "$IMAGE" bash -l -c "pi ${PI_ARGS[*]}"
+exec "$CONTAINER_ENGINE" run "${DOCKER_ARGS[@]}" "$IMAGE" bash -l -c "pi ${PI_ARGS[*]}"
