@@ -249,3 +249,4 @@ docker run --rm -it --entrypoint /bin/bash pi-agent:latest
 - [Pi Settings](docs/settings.md)
 - [Pi Skills](docs/skills.md)
 - [Pi Extensions](docs/extensions.md)
+- [Original Pi Container project by glemsom](https://github.com/glemsom/pi-container)
