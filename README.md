@@ -1,4 +1,4 @@
-# Pi Container
+# Pi Container (podman fork)
 
 Run the [Pi coding agent](https://pi.dev) inside an isolated Docker container, with your working directory and configuration properly mounted.
 
@@ -8,6 +8,10 @@ Run the [Pi coding agent](https://pi.dev) inside an isolated Docker container, w
 - **Consistency**: Same dependencies and Node.js version everywhere
 - **Security**: Restrict what pi can access by controlling the container
 - **Portability**: Works the same on any machine with Docker
+
+## Why the fork?
+
+I forked this repo to adapt the container to run rootless under podman, and to configure pi with my preferred packages / extensions.
 
 ## Quick Start
 
