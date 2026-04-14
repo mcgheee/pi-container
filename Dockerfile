@@ -37,7 +37,8 @@ RUN npm install -g lean-ctx-bin
 #RUN npm install -g @aliou/pi-guardrails
 #RUN npm install -g @mjakl/pi-subagent
 RUN pi install npm:pi-terminal
-RUN pi install npm:@ssweens/pi-qq
+#RUN pi install npm:@ssweens/pi-qq
+
 RUN pi install npm:@siddr/pi-status
 RUN pi install git:github.com/tmdgusya/pi-engineering-discipline-extension
 RUN pi install npm:@alexanderfortin/pi-loaded-tools
