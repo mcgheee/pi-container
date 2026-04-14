@@ -11,13 +11,25 @@ Run the [Pi coding agent](https://pi.dev) inside an isolated Docker container, w
 
 ## Quick Start
 
-### 1. Build the Container
+### 1. Clone repo
 
 ```bash
+git clone https://github.com/mcgheee/pi-container.git ./.pi-container
+```
+>[!Note]
+> It is recommended to clone this repo to a hidden directory inside your home directory.
+>```bash
+>git clone https://github.com/mcgheee/pi-container.git ~/.pi-container
+>```
+
+### 2. Build the Container
+
+```bash
+cd .pi-container
 docker build -t pi-agent:latest .
 ```
 
-### 2. Run Pi
+### 3. Run Pi
 
 **Interactive mode** (your current directory is mounted as `/workspace`):
 
@@ -31,7 +43,20 @@ docker build -t pi-agent:latest .
 ./run-pi.sh "List all files in this project"
 ```
 
-### 3. Set Up Authentication
+**Specifying Workspace Directory**
+
+```bash
+./run-pu.sh -w /path/to/project
+```
+>[!Note]
+>You can set up an `alias` to make this more convenient.
+>For example, add the following to your `~/.bashrc` or `~/.zshrc`:
+>```
+>alias run-pi='$HOME/.pi-container/run-pi.sh -w $PWD --verbose`
+>```
+>Make sure you specify the correct path to `run-pi.sh`.
+
+### 4. Set Up Authentication
 
 Pi supports multiple providers. Set your API key in the environment:
 
@@ -55,6 +80,9 @@ Or authenticate interactively inside the container:
 ./run-pi.sh
 # Then type: /login
 ```
+>[!Note]
+>You can connect to local models or custom endpoints by editing the `.pi/agent/models.json` file.
+>See: https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/docs/models.md
 
 ## Wrapper Script: `run-pi.sh`
 
@@ -107,21 +135,21 @@ which avoids host home-directory permission issues.
 If you want to force host-based config, set:
 
 ```bash
-PI_CODING_AGENT_DIR=/home/node/.pi/agent ./run-pi.sh
+PI_CODING_AGENT_DIR=$HOME/.pi/agent ./run-pi.sh
 ```
 
 Pi stores configuration in the selected `PI_CODING_AGENT_DIR`. Key files:
 
 | Path | Purpose |
 |------|---------|
-| `~/.pi/agent/settings.json` | Global settings |
-| `~/.pi/agent/auth.json` | Authentication tokens |
-| `~/.pi/agent/models.json` | Custom model configurations |
-| `~/.pi/agent/sessions/` | Session history |
-| `~/.pi/agent/extensions/` | Custom extensions |
-| `~/.pi/agent/skills/` | Custom skills |
-| `~/.pi/agent/themes/` | Custom themes |
-| `~/.pi/agent/prompts/` | Prompt templates |
+| `./.pi/agent/settings.json` | Global settings |
+| `./.pi/agent/auth.json` | Authentication tokens |
+| `./.pi/agent/models.json` | Custom model configurations |
+| `./.pi/agent/sessions/` | Session history |
+| `./.pi/agent/extensions/` | Custom extensions |
+| `./.pi/agent/skills/` | Custom skills |
+| `./.pi/agent/themes/` | Custom themes |
+| `./.pi/agent/prompts/` | Prompt templates |
 
 The host `~/.pi` directory is still mounted (when present) for optional manual migration/access.
 
@@ -141,6 +169,8 @@ Fix ownership on the host:
 ```bash
 sudo chown -R "$(id -u)":"$(id -g)" ~/.pi
 ```
+>[!Note]
+> This could also be caused if your home directory is on a different drive.
 
 To avoid all host-home permission issues, use the wrapper default (`/workspace/.pi/agent`) and do not override `PI_CODING_AGENT_DIR`.
 
